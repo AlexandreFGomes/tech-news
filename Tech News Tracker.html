@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EU Tech Geopolitics News Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        };
+    </script>
+    <style>
+        .tooltip {
+            display: none;
+            position: absolute;
+            z-index: 10;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            width: 256px;
+            font-size: 0.75rem;
+            line-height: 1rem;
+        }
+        .group:hover .tooltip {
+            display: block;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .region-content {
+            display: none;
+        }
+        .region-content.open {
+            display: block;
+        }
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900">
+    <div class="min-h-screen pb-8">
+        <!-- Header -->
+        <header class="bg-blue-900 text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 py-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl md:text-3xl font-bold">EU Tech Geopolitics Dashboard</h1>
+                        <p class="text-blue-200 mt-2 text-sm md:text-base">Real-time news from your chosen sources</p>
+                    </div>
+                    <button
+                        onclick="toggleDarkMode()"
+                        class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600"
+                    >
+                        🌓
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 py-6">
+            <!-- Saved Articles Tab -->
+            <div class="mb-6">
+                <button
+                    onclick="toggleSavedArticles()"
+                    class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
+                >
+                    📑 Saved Articles (0)
+                </button>
+                <div id="savedArticlesPanel" class="hidden mt-4 grid md:grid-cols-2 gap-4">
+                    <!-- Saved articles will appear here -->
+                </div>
+            </div>
+            <!-- Status Messages -->
+            <div id="statusMessages" class="mb-4"></div>
+
+            <!-- Configuration Panel -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 md:p-6 mb-6">
+                <h2 class="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Configure Sources</h2>
+
+                <!-- All Regions Toggle -->
+                <div class="flex items-center gap-2 mb-4">
+                    <input
+                        type="checkbox"
+                        id="allRegionsToggle"
+                        onchange="toggleAllRegions()"
+                        class="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                    />
+                    <label for="allRegionsToggle" class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                        All Regions
+                    </label>
+                </div>
+
+                <div class="flex flex-wrap gap-4 mb-4 items-center">
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Region</label>
+                        <select id="regionSelect" onchange="updateSourcesList()" class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                            <option value="netherlands">Netherlands</option>
+                            <option value="portugal">Portugal</option>
+                            <option value="europe">Europe</option>
+                            <option value="us">United States</option>
+                            <option value="global">Global</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Timeframe</label>
+                        <select id="timeframeSelect" class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                            <option value="3">Last 3 hours</option>
+                            <option value="6">Last 6 hours</option>
+                            <option value="24" selected>Last 24 hours</option>
+                            <option value="72">Last 3 days</option>
+                            <option value="168">Last week</option>
+                            <option value="720">Last month</option>
+                            <option value="999999">All time</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Topics</label>
+                        <div class="flex gap-2">
+                            <button onclick="selectAllTopics()" class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">Select All</button>
+                            <button onclick="deselectAllTopics()" class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">Deselect All</button>
+                            <button onclick="toggleTopicsPanel()" class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">Customize →</button>
+                        </div>
+                    </div>
+                    <div id="topicsGrid" class="grid grid-cols-2 md:grid-cols-3 gap-2"></div>
+
+                    <!-- Topics customization panel -->
+                    <div id="topicsPanel" class="hidden mt-3 border border-gray-200 dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700">
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Manage Topics</h4>
+                        <div id="topicsManageList" class="space-y-2 mb-3 max-h-40 overflow-y-auto"></div>
+                        <div class="border-t border-gray-200 dark:border-gray-600 pt-3">
+                            <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Add New Topic</p>
+                            <div class="flex gap-2">
+                                <input
+                                    type="text"
+                                    id="newTopicLabel"
+                                    placeholder="Topic name (e.g. 'Quantum Computing')"
+                                    class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                />
+                                <input
+                                    type="text"
+                                    id="newTopicKeywords"
+                                    placeholder="Keywords (comma-separated)"
+                                    class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                />
+                                <button
+                                    onclick="addNewTopic()"
+                                    class="px-3 py-2 bg-green-600 text-white rounded text-xs hover:bg-green-700 whitespace-nowrap"
+                                >
+                                    Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-4 flex-wrap">
+                    <!-- Sources -->
+                    <div class="flex-1 min-w-[160px]">
+                        <button onclick="toggleSourcesPanel()" class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                            <span>📡 Sources: <span id="currentRegionLabel" class="font-normal">Netherlands</span></span>
+                            <span id="sourcesCount" class="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded-full text-xs">0</span>
+                            <span id="sourcesPanelArrow">▸</span>
+                        </button>
+                        <div id="sourcesList" class="hidden"></div>
+                        <div id="sourcesPanel" class="hidden mt-2 border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
+                            <h3 class="font-medium text-gray-900 dark:text-gray-100 mb-3 text-sm">Manage Sources</h3>
+                            <div class="mb-4">
+                                <div id="sourcesCheckboxes" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                            </div>
+                            <div class="border-t border-gray-200 dark:border-gray-600 pt-4">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Add New Source</label>
+                                <div class="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded p-2 mb-3 text-xs text-blue-800 dark:text-blue-200">
+                                    💡 Just paste a website URL - we'll find the RSS feed automatically!
+                                </div>
+                                <div class="space-y-2">
+                                    <input
+                                        type="text"
+                                        id="newSourceUrl"
+                                        placeholder="Website URL (e.g. 'binnenlandsbestuur.nl')"
+                                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                    />
+                                    <button
+                                        onclick="findAndAddSource()"
+                                        id="addSourceBtn"
+                                        class="w-full px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:bg-gray-400"
+                                    >
+                                        🔍 Find RSS & Add Source
+                                    </button>
+                                    <div id="addSourceStatus" class="text-xs"></div>
+                                </div>
+                                <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                                    <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Or add RSS feed manually:</p>
+                                    <div class="space-y-2">
+                                        <input
+                                            type="text"
+                                            id="manualSourceName"
+                                            placeholder="Source name"
+                                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                        />
+                                        <input
+                                            type="url"
+                                            id="manualSourceUrl"
+                                            placeholder="Direct RSS URL"
+                                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                        />
+                                        <button
+                                            onclick="addManualSource()"
+                                            class="w-full px-4 py-2 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
+                                        >
+                                            + Add Manual
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Bulk Import</h4>
+                                    <textarea id="bulkSourcesInput" placeholder="https://www.nu.nl&#10;https://www.publico.pt" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" rows="3"></textarea>
+                                    <button onclick="importBulkSources()" id="bulkImportBtn" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">Import Sources</button>
+                                    <div id="bulkImportStatus" class="mt-2 text-xs space-y-1"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Muted Keywords -->
+                    <div class="flex-1 min-w-[160px]">
+                        <button onclick="toggleMutePanel()" class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                            <span>🔇 Muted Keywords</span>
+                            <span id="mutedCount" class="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded-full text-xs">0</span>
+                            <span id="mutePanelArrow">▸</span>
+                        </button>
+                        <div id="mutePanel" class="hidden mt-2 border border-gray-200 dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700">
+                            <div id="mutedKeywordsList" class="flex flex-wrap gap-1 mb-3"></div>
+                            <div class="flex gap-2">
+                                <input
+                                    type="text"
+                                    id="newMuteKeyword"
+                                    placeholder="Keyword to mute (e.g. 'crypto')"
+                                    class="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                />
+                                <button onclick="addMuteKeyword()" class="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 whitespace-nowrap">Mute</button>
+                            </div>
+                            <div id="muteKeywordsManageList" class="hidden"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fetch + Sort + Search all on one row -->
+            <div class="mb-4 flex gap-2 items-center">
+                <button
+                    onclick="updateNews()"
+                    id="updateBtn"
+                    class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-gradient-to-r from-blue-700 to-blue-500 text-white text-sm font-medium shadow hover:shadow-md transition-all duration-200 hover:from-blue-600 hover:to-blue-400 disabled:from-gray-400 disabled:to-gray-400 whitespace-nowrap flex-shrink-0"
+                >
+                    <span class="flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        Fetch
+                    </span>
+                </button>
+                <select id="sortToggle" onchange="reSort()" class="px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 whitespace-nowrap flex-shrink-0">
+                    <option value="date">Newest first</option>
+                    <option value="relevance">Most relevant</option>
+                </select>
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Search articles..."
+                    class="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    oninput="filterArticlesBySearch()"
+                />
+            </div>
+
+            <!-- Loading Skeleton -->
+            <div id="loadingSkeleton" class="grid md:grid-cols-2 gap-4 md:gap-6 hidden">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 animate-pulse">
+                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                    <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 animate-pulse">
+                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                    <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                </div>
+            </div>
+
+            <!-- News Container -->
+            <div id="newsContainer" class="grid grid-cols-1 gap-4"></div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 md:p-12 text-center">
+                <svg class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                </svg>
+                <h3 class="text-base md:text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Ready to fetch news</h3>
+                <p class="text-sm md:text-base text-gray-600 dark:text-gray-300">Select region, topics, and timeframe, then click "Fetch Latest News"</p>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const PROXY_URL = 'https://eu-tech-rss-proxy-e66a.afg-2-92.workers.dev/?url=';
+
+        const NEWS_SOURCES = {
+            netherlands: [
+                { name: 'NU.nl Algemeen', url: 'https://www.nu.nl/rss/Algemeen', enabled: true },
+                { name: 'NU.nl Tech', url: 'https://www.nu.nl/rss/Tech', enabled: true },
+                { name: 'Tweakers', url: 'https://feeds.feedburner.com/tweakers/mixed', enabled: true }
+            ],
+            portugal: [
+                { name: 'Público', url: 'https://www.publico.pt/rss', enabled: true },
+                { name: 'SAPO TEK', url: 'https://tek.sapo.pt/feed/', enabled: true }
+            ],
+            europe: [
+                { name: 'EURACTIV', url: 'https://www.euractiv.com/feed/', enabled: true },
+                { name: 'Politico EU', url: 'https://www.politico.eu/feed/', enabled: true }
+            ],
+            us: [
+                { name: 'TechCrunch', url: 'https://techcrunch.com/feed/', enabled: true },
+                { name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml', enabled: true },
+                { name: 'Ars Technica', url: 'https://feeds.arstechnica.com/arstechnica/index', enabled: true },
+                { name: 'Wired', url: 'https://www.wired.com/feed/rss', enabled: true },
+                { name: 'Engadget', url: 'https://www.engadget.com/rss.xml', enabled: true },
+                { name: 'The Next Web', url: 'https://feeds.thenextweb.com/thenextweb', enabled: true },
+                { name: 'VentureBeat', url: 'https://venturebeat.com/feed/', enabled: true },
+                { name: 'ZDNet', url: 'https://www.zdnet.com/news/rss/', enabled: true }
+            ],
+            global: [
+                { name: 'BBC Technology', url: 'http://feeds.bbci.co.uk/news/technology/rss.xml', enabled: true },
+                { name: 'The Guardian Tech', url: 'https://www.theguardian.com/technology/rss', enabled: true }
+            ]
+        };
+
+        let TOPICS = [
+            { id: 'ai', label: 'AI & Regulation', keywords: ['artificial intelligence', 'ChatGPT', 'machine learning', 'neural', 'LLM', 'generative AI'] },
+            { id: 'digital', label: 'Digital Policy', keywords: ['digital', 'policy', 'regulation', 'law', 'act', 'directive'] },
+            { id: 'semiconductors', label: 'Semiconductors', keywords: ['semiconductor', 'chip', 'ASML', 'TSMC', 'Intel', 'processor'] },
+            { id: 'china', label: 'China Relations', keywords: ['China', 'Chinese', 'Beijing', 'Taiwan'] },
+            { id: 'us', label: 'US Relations', keywords: ['USA', 'United States', 'American', 'Washington'] },
+            { id: 'privacy', label: 'Privacy & Data', keywords: ['privacy', 'data protection', 'GDPR', 'surveillance', 'encryption'] },
+            { id: 'tech', label: 'Tech Industry', keywords: ['tech', 'technology', 'startup', 'innovation', 'digital'] },
+            { id: 'innovation', label: 'Innovation', keywords: ['innovation', 'research', 'development', 'breakthrough', 'patent'] },
+            { id: 'policy', label: 'Policy', keywords: ['policy', 'government', 'regulation', 'law', 'parliament', 'commission'] }
+        ];
+
+        let selectedTopics = new Set(['ai', 'digital', 'policy', 'semiconductors']);
+        let mutedKeywords = [];
+        let lastFilteredArticles = [];
+        let selectedRegions = new Set(['netherlands']);
+
+        window.addEventListener('load', () => {
+            renderTopics();
+            updateSourcesList();
+            loadSettings();
+            renderMutedKeywords();
+            if (localStorage.getItem('darkMode') === 'true' || (!('darkMode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        });
+
+        // ── Mute Keywords ──────────────────────────────────────────
+        function toggleMutePanel() {
+            const panel = document.getElementById('mutePanel');
+            const arrow = document.getElementById('mutePanelArrow');
+            panel.classList.toggle('hidden');
+            arrow.textContent = panel.classList.contains('hidden') ? '▸' : '▾';
+            renderMuteManageList();
+        }
+
+        function addMuteKeyword() {
+            const input = document.getElementById('newMuteKeyword');
+            const keyword = input.value.trim().toLowerCase();
+            if (!keyword) return;
+            if (!mutedKeywords.includes(keyword)) {
+                mutedKeywords.push(keyword);
+                saveSettings();
+                renderMutedKeywords();
+                renderMuteManageList();
+                showStatus(`Muted: "${keyword}"`, 'info');
+            }
+            input.value = '';
+        }
+
+        function removeMuteKeyword(keyword) {
+            mutedKeywords = mutedKeywords.filter(k => k !== keyword);
+            saveSettings();
+            renderMutedKeywords();
+            renderMuteManageList();
+        }
+
+        function renderMutedKeywords() {
+            const list = document.getElementById('mutedKeywordsList');
+            const countBadge = document.getElementById('mutedCount');
+            if (countBadge) countBadge.textContent = mutedKeywords.length;
+            if (!list) return;
+            if (mutedKeywords.length === 0) {
+                list.innerHTML = '<p class="text-gray-400 dark:text-gray-500 italic text-xs mb-2">No muted keywords yet.</p>';
+            } else {
+                list.innerHTML = mutedKeywords.map(k =>
+                    `<span class="inline-flex items-center gap-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 px-2 py-0.5 rounded text-xs">${k} <button onclick="removeMuteKeyword('${k}')" class="ml-1 text-red-400 hover:text-red-600">✕</button></span>`
+                ).join('');
+            }
+        }
+
+        function filterByMutedKeywords(articles) {
+            if (mutedKeywords.length === 0) return articles;
+            return articles.filter(article => {
+                const text = normalizeText(article.title + ' ' + (article.description || ''));
+                return !mutedKeywords.some(keyword => {
+                    const regex = new RegExp(`\\b${normalizeText(keyword)}\\b`, 'i');
+                    return regex.test(text);
+                });
+            });
+        }
+
+        // ── Status ─────────────────────────────────────────────────
+        function showStatus(message, type = 'info') {
+            const container = document.getElementById('statusMessages');
+            const div = document.createElement('div');
+            const colors = {
+                info: 'bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-200',
+                success: 'bg-green-50 dark:bg-green-900 border-green-200 dark:border-green-700 text-green-800 dark:text-green-200',
+                error: 'bg-red-50 dark:bg-red-900 border-red-200 dark:border-red-700 text-red-800 dark:text-red-200',
+                warning: 'bg-yellow-50 dark:bg-yellow-900 border-yellow-200 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200'
+            };
+            div.className = `${colors[type]} border rounded-lg p-4 mb-4`;
+            div.innerHTML = `<p class="text-sm">${message}</p>`;
+            container.appendChild(div);
+            setTimeout(() => div.remove(), 5000);
+        }
+
+        function normalizeText(text) {
+            return text
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^\w\s]/g, '');
+        }
+
+        function stripHtml(html) {
+            if (!html) return "";
+            const tmp = document.createElement("DIV");
+            tmp.innerHTML = html;
+            return tmp.textContent || tmp.innerText || "";
+        }
+
+        function isCleanText(text) {
+            return text && !/<[a-z][\s\S]*>/i.test(text);
+        }
+
+        function truncateText(text, maxLength = 200) {
+            if (!text) return "";
+            return text.length > maxLength ? text.substring(0, maxLength).trim() + "..." : text;
+        }
+
+        // ── Regions ─────────────────────────────────────────────────
+        function toggleAllRegions() {
+            const isChecked = document.getElementById('allRegionsToggle').checked;
+            if (isChecked) {
+                selectedRegions = new Set(Object.keys(NEWS_SOURCES));
+                document.getElementById('regionSelect').disabled = true;
+            } else {
+                selectedRegions = new Set([document.getElementById('regionSelect').value]);
+                document.getElementById('regionSelect').disabled = false;
+            }
+            updateSourcesList();
+            saveSettings();
+        }
+
+        // ── RSS Fetching ───────────────────────────────────────────
+        async function fetchRSSFeed(feedUrl, sourceName, region, timeframeHours) {
+            const cacheKey = `rss-cache-${sourceName}`;
+            const cached = localStorage.getItem(cacheKey);
+            const now = new Date().getTime();
+            const cacheExpiry = 15 * 60 * 1000;
+            const cutoffTime = Date.now() - (timeframeHours * 3600000);
+
+            if (cached) {
+                const { timestamp, articles } = JSON.parse(cached);
+                if (now - timestamp < cacheExpiry) {
+                    showStatus(`✓ ${sourceName}: Loaded from cache`, 'info');
+                    return articles.filter(a => !a.pubDate || a.pubDate >= cutoffTime);
+                }
+            }
+
+            showStatus(`Fetching ${sourceName}...`, 'info');
+            try {
+                const proxiedUrl = PROXY_URL + encodeURIComponent(feedUrl);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+                const response = await fetch(proxiedUrl, {
+                    signal: controller.signal,
+                    method: 'GET',
+                    mode: 'cors',
+                    cache: 'no-cache'
+                });
+
+                clearTimeout(timeoutId);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const text = await response.text();
+                if (!text || text.trim().length === 0) throw new Error('Empty response');
+
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(text, 'text/xml');
+                const parserError = xml.querySelector('parsererror');
+                if (parserError) throw new Error('Invalid XML');
+
+                const items = xml.querySelectorAll('item, entry');
+                const articles = [];
+
+                items.forEach(item => {
+                    try {
+                        let title = '';
+                        const titleElement = item.querySelector('title');
+                        if (titleElement) title = titleElement.textContent.trim();
+
+                        let link = '';
+                        const linkElement = item.querySelector('link');
+                        if (linkElement) {
+                            link = linkElement.textContent.trim() || linkElement.getAttribute('href') || '';
+                        }
+
+                        let description = '';
+                        const descriptionElement = item.querySelector('description, summary') ||
+                            item.getElementsByTagNameNS('http://purl.org/rss/1.0/modules/content/', 'encoded')[0];
+                        if (descriptionElement) {
+                            description = stripHtml(descriptionElement.textContent || '');
+                        }
+                        const cleanDescription = isCleanText(description) ? truncateText(description) : null;
+
+                        let pubDate = null;
+                        const pubDateElement = item.querySelector('pubDate, published, updated');
+                        if (pubDateElement) {
+                            pubDate = new Date(pubDateElement.textContent.trim()).getTime();
+                        }
+
+                        if (title && link) {
+                            if (!pubDate || pubDate >= cutoffTime) {
+                                articles.push({
+                                    title,
+                                    url: link,
+                                    source: sourceName,
+                                    sourceRegion: region,
+                                    description: cleanDescription,
+                                    pubDate
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error parsing item:', e);
+                    }
+                });
+
+                localStorage.setItem(cacheKey, JSON.stringify({ timestamp: now, articles }));
+                showStatus(`✓ ${sourceName}: Found ${articles.length} articles`, 'success');
+                return articles;
+            } catch (error) {
+                console.error('Error fetching', sourceName, ':', error);
+                showStatus(`✗ ${sourceName} failed: ${error.message}. <button onclick="retryFetch('${sourceName}', '${feedUrl}', ${timeframeHours}, '${region}')" class="text-blue-600 dark:text-blue-400 hover:underline">Retry</button>`, 'error');
+                return [];
+            }
+        }
+
+        function retryFetch(sourceName, feedUrl, timeframeHours, region) {
+            fetchRSSFeed(feedUrl, sourceName, region, timeframeHours);
+        }
+
+        // ── Sources Panel ──────────────────────────────────────────
+        function toggleSourcesPanel() {
+            const panel = document.getElementById('sourcesPanel');
+            const arrow = document.getElementById('sourcesPanelArrow');
+            panel.classList.toggle('hidden');
+            arrow.textContent = panel.classList.contains('hidden') ? '▸' : '▾';
+            if (!panel.classList.contains('hidden')) renderSourcesCheckboxes();
+        }
+
+        function renderSourcesCheckboxes() {
+            const region = [...selectedRegions][0];
+            const sources = NEWS_SOURCES[region] || [];
+            const container = document.getElementById('sourcesCheckboxes');
+            container.innerHTML = '';
+
+            if (sources.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 italic text-sm">No sources yet. Add one below.</p>';
+                return;
+            }
+
+            sources.forEach((source, index) => {
+                const div = document.createElement('div');
+                div.className = 'flex flex-col gap-1 p-2 hover:bg-white dark:hover:bg-gray-600 rounded border-b border-gray-100 dark:border-gray-700 last:border-0';
+                div.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="source-${index}" ${source.enabled ? 'checked' : ''} onchange="toggleSource('${region}', ${index})" class="w-4 h-4 text-blue-600 border-gray-300 rounded flex-shrink-0" />
+                        <label for="source-${index}" class="flex-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer font-medium">${source.name}</label>
+                        <button onclick="editSource('${region}', ${index})" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 text-xs px-2 py-1 rounded border border-blue-300 dark:border-blue-500 flex-shrink-0">Edit</button>
+                        <button onclick="removeSource('${region}', ${index})" class="text-red-600 dark:text-red-400 hover:text-red-800 text-xs px-2 py-1 rounded border border-red-300 dark:border-red-500 flex-shrink-0">Remove</button>
+                    </div>
+                    <div class="ml-6">
+                        <a href="${source.url}" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">${source.url}</a>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function editSource(region, index) {
+            const source = NEWS_SOURCES[region][index];
+            const div = document.createElement('div');
+            div.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50';
+            div.id = 'editSourceModal';
+            div.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Edit Source</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Source Name</label>
+                            <input type="text" id="editSourceName" value="${source.name}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">RSS URL</label>
+                            <input type="url" id="editSourceUrl" value="${source.url}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
+                        </div>
+                        <div class="flex justify-end gap-2">
+                            <button onclick="document.getElementById('editSourceModal').remove()" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button>
+                            <button onclick="saveEditedSource('${region}', ${index})" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(div);
+        }
+
+        function saveEditedSource(region, index) {
+            const newName = document.getElementById('editSourceName').value.trim();
+            const newUrl = document.getElementById('editSourceUrl').value.trim();
+            if (!newName || !newUrl) { alert('Please fill in all fields'); return; }
+            if (!newUrl.startsWith('http://') && !newUrl.startsWith('https://')) { alert('URL must start with http:// or https://'); return; }
+            NEWS_SOURCES[region][index].name = newName;
+            NEWS_SOURCES[region][index].url = newUrl;
+            document.getElementById('editSourceModal').remove();
+            renderSourcesCheckboxes();
+            updateSourcesList();
+            saveSettings();
+            showStatus(`Updated source: ${newName}`, 'success');
+        }
+
+        // ── Topics ─────────────────────────────────────────────────
+        function selectAllTopics() {
+            TOPICS.forEach(topic => selectedTopics.add(topic.id));
+            renderTopics();
+            saveSettings();
+        }
+
+        function deselectAllTopics() {
+            selectedTopics.clear();
+            renderTopics();
+            saveSettings();
+        }
+
+        function toggleTopicsPanel() {
+            const panel = document.getElementById('topicsPanel');
+            panel.classList.toggle('hidden');
+            if (!panel.classList.contains('hidden')) renderTopicsManageList();
+        }
+
+        function renderTopicsManageList() {
+            const container = document.getElementById('topicsManageList');
+            container.innerHTML = '';
+            TOPICS.forEach((topic, index) => {
+                const div = document.createElement('div');
+                div.className = 'p-2 hover:bg-white dark:hover:bg-gray-600 rounded border border-gray-100 dark:border-gray-700 mb-2';
+                div.id = `topic-manage-${index}`;
+                const keywordsPreview = topic.keywords.slice(0, 3).join(', ') + (topic.keywords.length > 3 ? '...' : '');
+                div.innerHTML = `
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex-1">
+                            <span class="font-medium text-gray-900 dark:text-gray-100 text-sm">${topic.label}</span>
+                            ${topic.custom ? '<span class="ml-2 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 px-2 py-0.5 rounded">Custom</span>' : ''}
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="editTopic(${index})" class="text-blue-600 dark:text-blue-400 text-xs px-2">Edit</button>
+                            ${topic.custom ? `<button onclick="removeTopic(${index})" class="text-red-600 dark:text-red-400 text-xs px-2">Remove</button>` : ''}
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 ml-1">Keywords: ${keywordsPreview}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function editTopic(index) {
+            const topic = TOPICS[index];
+            const div = document.getElementById(`topic-manage-${index}`);
+            div.innerHTML = `
+                <div class="space-y-2">
+                    <input type="text" id="edit-topic-label-${index}" value="${topic.label}" class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" placeholder="Topic name" />
+                    <textarea id="edit-topic-keywords-${index}" class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" rows="2" placeholder="Keywords (comma-separated)">${topic.keywords.join(', ')}</textarea>
+                    <div class="flex gap-2">
+                        <button onclick="saveTopicEdit(${index})" class="flex-1 px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Save</button>
+                        <button onclick="renderTopicsManageList()" class="flex-1 px-3 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-500">Cancel</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function saveTopicEdit(index) {
+            const label = document.getElementById(`edit-topic-label-${index}`).value.trim();
+            const keywordsStr = document.getElementById(`edit-topic-keywords-${index}`).value.trim();
+            if (!label || !keywordsStr) { alert('Please fill in all fields'); return; }
+            const keywords = keywordsStr.split(',').map(k => k.trim()).filter(k => k);
+            if (keywords.length === 0) { alert('Please enter at least one keyword'); return; }
+            TOPICS[index].label = label;
+            TOPICS[index].keywords = keywords;
+            if (!TOPICS[index].custom) TOPICS[index].custom = true;
+            renderTopics();
+            renderTopicsManageList();
+            saveSettings();
+            showStatus(`Updated topic: ${label}`, 'success');
+        }
+
+        function addNewTopic() {
+            const label = document.getElementById('newTopicLabel').value.trim();
+            const keywordsStr = document.getElementById('newTopicKeywords').value.trim();
+            if (!label || !keywordsStr) { alert('Please fill in all fields'); return; }
+            const keywords = keywordsStr.split(',').map(k => k.trim()).filter(k => k);
+            if (keywords.length === 0) { alert('Please enter at least one keyword'); return; }
+            const id = label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            if (TOPICS.some(t => t.id === id)) { alert('A topic with this name already exists'); return; }
+            TOPICS.push({ id, label, keywords, custom: true });
+            selectedTopics.add(id);
+            document.getElementById('newTopicLabel').value = '';
+            document.getElementById('newTopicKeywords').value = '';
+            renderTopics();
+            renderTopicsManageList();
+            saveSettings();
+            showStatus(`Added topic: ${label}`, 'success');
+        }
+
+        function removeTopic(index) {
+            const topic = TOPICS[index];
+            if (!topic.custom) { alert('Cannot remove default topics'); return; }
+            if (confirm(`Remove topic "${topic.label}"?`)) {
+                selectedTopics.delete(topic.id);
+                TOPICS.splice(index, 1);
+                renderTopics();
+                renderTopicsManageList();
+                saveSettings();
+            }
+        }
+
+        function removeSource(region, index) {
+            const source = NEWS_SOURCES[region][index];
+            if (confirm(`Remove "${source.name}"?`)) {
+                NEWS_SOURCES[region].splice(index, 1);
+                renderSourcesCheckboxes();
+                updateSourcesList();
+                saveSettings();
+            }
+        }
+
+        async function findAndAddSource() {
+            let url = document.getElementById('newSourceUrl').value.trim();
+            if (!url) { alert('Please enter a website URL'); return; }
+            if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+
+            const statusDiv = document.getElementById('addSourceStatus');
+            const btn = document.getElementById('addSourceBtn');
+            statusDiv.innerHTML = '<p class="text-blue-600 dark:text-blue-400">🔍 Searching for RSS feed...</p>';
+            btn.disabled = true;
+
+            try {
+                const feedUrl = await discoverRSSFeed(url);
+                if (feedUrl) {
+                    const hostname = new URL(url).hostname.replace('www.', '');
+                    const sourceName = hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1);
+                    const region = [...selectedRegions][0];
+                    const exists = NEWS_SOURCES[region].some(s => s.url === feedUrl);
+                    if (exists) {
+                        statusDiv.innerHTML = '<p class="text-yellow-600 dark:text-yellow-400">⚠️ This source already exists</p>';
+                        btn.disabled = false;
+                        setTimeout(() => statusDiv.innerHTML = '', 3000);
+                        return;
+                    }
+                    NEWS_SOURCES[region].push({ name: sourceName, url: feedUrl, enabled: true, custom: true });
+                    statusDiv.innerHTML = `<p class="text-green-600 dark:text-green-400">✓ Added "${sourceName}"</p>`;
+                    document.getElementById('newSourceUrl').value = '';
+                    renderSourcesCheckboxes();
+                    updateSourcesList();
+                    saveSettings();
+                    setTimeout(() => statusDiv.innerHTML = '', 3000);
+                } else {
+                    statusDiv.innerHTML = '<p class="text-red-600 dark:text-red-400">✗ No RSS feed found. Try manual add below.</p>';
+                }
+            } catch (error) {
+                console.error('Error discovering RSS:', error);
+                statusDiv.innerHTML = `<p class="text-red-600 dark:text-red-400">✗ Error: ${error.message}</p>`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function discoverRSSFeed(websiteUrl) {
+            try {
+                const proxiedUrl = PROXY_URL + encodeURIComponent(websiteUrl);
+                const response = await fetch(proxiedUrl);
+                if (!response.ok) throw new Error('Could not access website');
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const feedSelectors = [
+                    'link[type="application/rss+xml"]',
+                    'link[type="application/atom+xml"]',
+                    'link[rel="alternate"][type="application/rss+xml"]',
+                    'link[rel="alternate"][type="application/atom+xml"]'
+                ];
+                for (const selector of feedSelectors) {
+                    const feedLink = doc.querySelector(selector);
+                    if (feedLink) {
+                        let feedUrl = feedLink.getAttribute('href');
+                        if (feedUrl.startsWith('/')) {
+                            const baseUrl = new URL(websiteUrl);
+                            feedUrl = baseUrl.origin + feedUrl;
+                        } else if (!feedUrl.startsWith('http')) {
+                            const baseUrl = new URL(websiteUrl);
+                            feedUrl = baseUrl.origin + '/' + feedUrl;
+                        }
+                        return feedUrl;
+                    }
+                }
+                const commonPaths = ['/rss', '/feed', '/rss.xml', '/feed.xml', '/atom.xml'];
+                const baseUrl = new URL(websiteUrl);
+                for (const path of commonPaths) {
+                    const testUrl = baseUrl.origin + path;
+                    try {
+                        const testResponse = await fetch(PROXY_URL + encodeURIComponent(testUrl));
+                        if (testResponse.ok) {
+                            const text = await testResponse.text();
+                            if (text.includes('<?xml') || text.includes('<rss') || text.includes('<feed')) return testUrl;
+                        }
+                    } catch (e) {}
+                }
+                return null;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        function addManualSource() {
+            const name = document.getElementById('manualSourceName').value.trim();
+            const url = document.getElementById('manualSourceUrl').value.trim();
+            if (!name || !url) { alert('Please fill in all fields'); return; }
+            if (!url.startsWith('http://') && !url.startsWith('https://')) { alert('URL must start with http:// or https://'); return; }
+            const region = [...selectedRegions][0];
+            if (NEWS_SOURCES[region].some(s => s.url === url)) { alert('This RSS feed is already in your sources'); return; }
+            NEWS_SOURCES[region].push({ name, url, enabled: true, custom: true });
+            document.getElementById('manualSourceName').value = '';
+            document.getElementById('manualSourceUrl').value = '';
+            renderSourcesCheckboxes();
+            updateSourcesList();
+            saveSettings();
+            showStatus(`Added ${name}`, 'success');
+        }
+
+        function toggleSource(region, index) {
+            NEWS_SOURCES[region][index].enabled = !NEWS_SOURCES[region][index].enabled;
+            updateSourcesList();
+            saveSettings();
+        }
+
+        function updateSourcesList() {
+            const isAllRegions = document.getElementById('allRegionsToggle').checked;
+            if (isAllRegions) {
+                selectedRegions = new Set(Object.keys(NEWS_SOURCES));
+                document.getElementById('regionSelect').disabled = true;
+            } else {
+                selectedRegions = new Set([document.getElementById('regionSelect').value]);
+                document.getElementById('regionSelect').disabled = false;
+            }
+
+            const label = document.getElementById('currentRegionLabel');
+            if (label) {
+                if (isAllRegions) {
+                    label.textContent = 'All Regions';
+                } else {
+                    label.textContent = document.getElementById('regionSelect').value.charAt(0).toUpperCase() +
+                                        document.getElementById('regionSelect').value.slice(1);
+                }
+            }
+
+            let enabledCount = 0;
+            selectedRegions.forEach(region => {
+                const sources = NEWS_SOURCES[region] || [];
+                enabledCount += sources.filter(s => s.enabled).length;
+            });
+            const countBadge = document.getElementById('sourcesCount');
+            if (countBadge) countBadge.textContent = enabledCount;
+        }
+
+        function renderTopics() {
+            const container = document.getElementById('topicsGrid');
+            container.innerHTML = '';
+            TOPICS.forEach(topic => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center gap-2';
+                div.innerHTML = `
+                    <input type="checkbox" id="topic-${topic.id}" value="${topic.id}" ${selectedTopics.has(topic.id) ? 'checked' : ''} onchange="toggleTopic('${topic.id}')" class="w-4 h-4 text-blue-600 border-gray-300 rounded" />
+                    <label for="topic-${topic.id}" class="text-xs md:text-sm text-gray-700 dark:text-gray-300 cursor-pointer">${topic.label}</label>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function toggleTopic(topicId) {
+            if (selectedTopics.has(topicId)) {
+                selectedTopics.delete(topicId);
+            } else {
+                selectedTopics.add(topicId);
+            }
+            saveSettings();
+        }
+
+        // ── Settings ───────────────────────────────────────────────
+        function saveSettings() {
+            localStorage.setItem('selectedTopics', JSON.stringify([...selectedTopics]));
+            localStorage.setItem('selectedRegions', JSON.stringify([...selectedRegions]));
+            localStorage.setItem('selectedRegion', document.getElementById('regionSelect').value);
+            localStorage.setItem('timeframe', document.getElementById('timeframeSelect').value);
+            localStorage.setItem('newsSources', JSON.stringify(NEWS_SOURCES));
+            localStorage.setItem('allTopics', JSON.stringify(TOPICS));
+            localStorage.setItem('mutedKeywords', JSON.stringify(mutedKeywords));
+        }
+
+        function loadSettings() {
+            try {
+                const allTopics = localStorage.getItem('allTopics');
+                if (allTopics) {
+                    const loadedTopics = JSON.parse(allTopics);
+                    TOPICS.length = 0;
+                    loadedTopics.forEach(topic => TOPICS.push(topic));
+                }
+                const topics = localStorage.getItem('selectedTopics');
+                if (topics) {
+                    selectedTopics = new Set(JSON.parse(topics));
+                    renderTopics();
+                }
+                const regions = localStorage.getItem('selectedRegions');
+                if (regions) {
+                    selectedRegions = new Set(JSON.parse(regions));
+                    document.getElementById('allRegionsToggle').checked = selectedRegions.size === Object.keys(NEWS_SOURCES).length;
+                    if (selectedRegions.size === Object.keys(NEWS_SOURCES).length) {
+                        document.getElementById('regionSelect').disabled = true;
+                    } else {
+                        document.getElementById('regionSelect').disabled = false;
+                    }
+                }
+                const region = localStorage.getItem('selectedRegion');
+                if (region) {
+                    document.getElementById('regionSelect').value = region;
+                    updateSourcesList();
+                }
+                const timeframe = localStorage.getItem('timeframe');
+                if (timeframe) document.getElementById('timeframeSelect').value = timeframe;
+                const sources = localStorage.getItem('newsSources');
+                if (sources) {
+                    const loadedSources = JSON.parse(sources);
+                    Object.keys(loadedSources).forEach(r => { if (NEWS_SOURCES[r]) NEWS_SOURCES[r] = loadedSources[r]; });
+                    updateSourcesList();
+                }
+                const muted = localStorage.getItem('mutedKeywords');
+                if (muted) { mutedKeywords = JSON.parse(muted); renderMutedKeywords(); }
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        }
+
+        async function importBulkSources() {
+            const input = document.getElementById('bulkSourcesInput').value.trim();
+            if (!input) { alert('Please paste your websites in the box above.'); return; }
+            const lines = input.split('\n').filter(line => line.trim());
+            const region = [...selectedRegions][0];
+            const statusDiv = document.getElementById('bulkImportStatus');
+            const btn = document.getElementById('bulkImportBtn');
+            statusDiv.innerHTML = '';
+            btn.disabled = true;
+            let importedCount = 0;
+            for (const line of lines) {
+                const div = document.createElement('div');
+                div.className = 'flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded';
+                div.innerHTML = `<span class="text-gray-500 dark:text-gray-400 text-xs">${line}</span><span class="text-blue-500 dark:text-blue-400 text-xs">🔍 Discovering RSS...</span>`;
+                statusDiv.appendChild(div);
+                try {
+                    const url = line.trim();
+                    if (!url.startsWith('http://') && !url.startsWith('https://')) throw new Error('URL must start with http:// or https://');
+                    const feedUrl = await discoverRSSFeed(url);
+                    if (feedUrl) {
+                        const hostname = new URL(url).hostname.replace('www.', '');
+                        const sourceName = hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1);
+                        const exists = NEWS_SOURCES[region].some(s => s.url === feedUrl);
+                        if (!exists) {
+                            NEWS_SOURCES[region].push({ name: sourceName, url: feedUrl, enabled: true, custom: true });
+                            importedCount++;
+                            div.innerHTML = `<span class="text-gray-500 dark:text-gray-400 text-xs">${line}</span><span class="text-green-500 dark:text-green-400 text-xs">✓ Added: ${sourceName}</span>`;
+                        } else {
+                            div.innerHTML = `<span class="text-gray-500 dark:text-gray-400 text-xs">${line}</span><span class="text-yellow-500 dark:text-yellow-400 text-xs">⚠️ Already exists</span>`;
+                        }
+                    } else {
+                        div.innerHTML = `<span class="text-gray-500 dark:text-gray-400 text-xs">${line}</span><span class="text-red-500 dark:text-red-400 text-xs">✗ No RSS feed found</span>`;
+                    }
+                } catch (error) {
+                    div.innerHTML = `<span class="text-gray-500 dark:text-gray-400 text-xs">${line}</span><span class="text-red-500 dark:text-red-400 text-xs">✗ Error: ${error.message}</span>`;
+                }
+            }
+            if (importedCount > 0) { renderSourcesCheckboxes(); updateSourcesList(); saveSettings(); showStatus(`✓ Imported ${importedCount} new sources`, 'success'); }
+            btn.disabled = false;
+        }
+
+        // ── News Fetching & Display ────────────────────────────────
+        async function updateNews() {
+            const isAllRegions = document.getElementById('allRegionsToggle').checked;
+            const regions = isAllRegions ? Object.keys(NEWS_SOURCES) : [document.getElementById('regionSelect').value];
+            selectedRegions = new Set(regions);
+
+            if (selectedTopics.size === 0) {
+                alert('Please select at least one topic');
+                return;
+            }
+
+            const allSources = [];
+            regions.forEach(region => {
+                const regionSources = NEWS_SOURCES[region] || [];
+                regionSources.forEach(source => {
+                    if (source.enabled) {
+                        allSources.push({ ...source, region });
+                    }
+                });
+            });
+
+            if (allSources.length === 0) {
+                alert('No sources enabled. Enable sources in "Customize".');
+                return;
+            }
+
+            const updateBtn = document.getElementById('updateBtn');
+            updateBtn.disabled = true;
+            updateBtn.innerHTML = '<svg class="w-3.5 h-3.5 animate-spin inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Fetching...';
+            document.getElementById('loadingSkeleton').classList.remove('hidden');
+
+            try {
+                const fetchPromises = allSources.map(source =>
+                    fetchRSSFeed(source.url, source.name, source.region, parseInt(document.getElementById('timeframeSelect').value))
+                );
+
+                const results = await Promise.all(fetchPromises);
+                const allArticles = results.flat();
+
+                const seen = new Set();
+                const uniqueArticles = allArticles.filter(article => {
+                    if (seen.has(article.url)) return false;
+                    seen.add(article.url);
+                    return true;
+                });
+
+                if (uniqueArticles.length === 0) {
+                    showStatus('No articles found.', 'error');
+                    document.getElementById('newsContainer').innerHTML = '';
+                } else {
+                    const topicFiltered = filterByTopics(uniqueArticles);
+                    const filteredArticles = filterByMutedKeywords(topicFiltered);
+
+                    if (filteredArticles.length === 0) {
+                        showStatus(`Found ${uniqueArticles.length} articles but none matched your topics/filters.`, 'warning');
+                        document.getElementById('newsContainer').innerHTML = '';
+                    } else {
+                        showStatus(`Showing ${filteredArticles.length} articles`, 'success');
+                        lastFilteredArticles = filteredArticles;
+                        displayNews(filteredArticles, parseInt(document.getElementById('timeframeSelect').value));
+                        document.getElementById('emptyState').classList.add('hidden');
+                    }
+                }
+                saveSettings();
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+            } finally {
+                updateBtn.disabled = false;
+                updateBtn.innerHTML = '<span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Fetch</span>';
+                document.getElementById('loadingSkeleton').classList.add('hidden');
+            }
+        }
+
+        function filterByTopics(articles) {
+            if (selectedTopics.size === 0) return articles;
+            return articles.filter(article => {
+                const text = normalizeText(article.title + ' ' + (article.description || ''));
+                let matchCount = 0;
+                const matchedTopics = [];
+                Array.from(selectedTopics).forEach(topicId => {
+                    const topic = TOPICS.find(t => t.id === topicId);
+                    if (!topic) return;
+                    let topicMatched = false;
+                    topic.keywords.forEach(keyword => {
+                        const regex = new RegExp(`\\b${normalizeText(keyword)}\\b`, 'i');
+                        if (regex.test(text)) {
+                            matchCount++;
+                            topicMatched = true;
+                        }
+                    });
+                    if (topicMatched) matchedTopics.push(topic.label);
+                });
+                article.relevance = matchCount;
+                article.matchedTopics = matchedTopics;
+                return matchCount > 0;
+            });
+        }
+
+        function reSort() {
+            if (lastFilteredArticles.length > 0) {
+                displayNews(lastFilteredArticles, parseInt(document.getElementById('timeframeSelect').value));
+            }
+        }
+
+        // ── THE FIX: direct onclick on each header instead of broken event delegation ──
+        function toggleRegion(region) {
+            const content = document.getElementById(`region-content-${region}`);
+            const arrow = document.getElementById(`region-arrow-${region}`);
+            if (!content) return;
+            const isOpen = content.classList.contains('open');
+            if (isOpen) {
+                content.classList.remove('open');
+                content.style.display = 'none';
+                if (arrow) arrow.textContent = '▸';
+            } else {
+                content.classList.add('open');
+                content.style.display = 'block';
+                if (arrow) arrow.textContent = '▾';
+            }
+        }
+
+        function displayNews(articles, timeframeHours) {
+            const container = document.getElementById('newsContainer');
+            container.innerHTML = '';
+
+            const summary = document.createElement('div');
+            summary.className = 'bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-lg p-3 md:p-4 mb-4';
+            summary.innerHTML = `
+                <p class="text-xs md:text-sm text-blue-800 dark:text-blue-200">
+                    <strong>${articles.length} articles</strong> found in the last ${getTimeframeLabel(timeframeHours)}
+                </p>
+            `;
+            container.appendChild(summary);
+
+            // Group by region
+            const articlesByRegion = {};
+            articles.forEach(article => {
+                const region = article.sourceRegion || 'unknown';
+                if (!articlesByRegion[region]) articlesByRegion[region] = [];
+                articlesByRegion[region].push(article);
+            });
+
+            for (const [region, regionArticles] of Object.entries(articlesByRegion)) {
+                const regionSection = document.createElement('div');
+                regionSection.className = 'mb-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden';
+
+                // Header — onclick calls toggleRegion directly, no event delegation
+                const regionHeader = document.createElement('div');
+                regionHeader.className = 'bg-gray-100 dark:bg-gray-750 p-4 cursor-pointer flex justify-between items-center select-none hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors';
+                regionHeader.setAttribute('onclick', `toggleRegion('${region}')`);
+                regionHeader.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span id="region-arrow-${region}" class="text-gray-500 dark:text-gray-400 font-mono">▸</span>
+                        <h3 class="font-semibold text-gray-900 dark:text-gray-100">${region.charAt(0).toUpperCase() + region.slice(1)}</h3>
+                    </div>
+                    <span class="text-sm text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-full">${regionArticles.length}</span>
+                `;
+                regionSection.appendChild(regionHeader);
+
+                // Content — hidden by default, toggled by toggleRegion()
+                const regionContent = document.createElement('div');
+                regionContent.id = `region-content-${region}`;
+                regionContent.style.display = 'none';
+
+                // Sort
+                const sortMode = document.getElementById('sortToggle').value;
+                const sorted = [...regionArticles];
+                if (sortMode === 'date') {
+                    sorted.sort((a, b) => (b.pubDate || 0) - (a.pubDate || 0));
+                } else {
+                    sorted.sort((a, b) => (b.relevance || 0) - (a.relevance || 0));
+                }
+
+                sorted.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700';
+                    card.setAttribute('data-article', '');
+
+                    const dateStr = item.pubDate
+                        ? new Date(item.pubDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+                        : '';
+
+                    const topicBadges = (item.matchedTopics || []).map(t =>
+                        `<span class="inline-block bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs px-2 py-0.5 rounded">${t}</span>`
+                    ).join('');
+
+                    const safeTitle = escapeHtml(item.title);
+                    const safeDesc = escapeHtml(item.description || '');
+                    const safeSource = escapeHtml(item.source);
+
+                    card.innerHTML = `
+                        <div class="p-4 md:p-5">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">${safeSource}</span>
+                                <span class="text-xs text-gray-400 dark:text-gray-500">${dateStr}</span>
+                            </div>
+                            ${topicBadges ? `<div class="flex flex-wrap gap-1 mb-2">${topicBadges}</div>` : ''}
+                            <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="block mb-3">
+                                <h4 class="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 text-base mb-1">${safeTitle}</h4>
+                                ${item.description ? `<p class="text-sm text-gray-600 dark:text-gray-300">${safeDesc}</p>` : ''}
+                            </a>
+                            <div class="flex items-center gap-4">
+                                <button onclick="saveArticle('${item.url.replace(/'/g, "\\'")}', \`${safeTitle.replace(/`/g, '\\`')}\`, \`${safeDesc.replace(/`/g, '\\`')}\`, '${safeSource.replace(/'/g, "\\'")}')" class="text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 text-xs">📑 Save</button>
+                                <button onclick="markAsRead('${item.url.replace(/'/g, "\\'")}', this)" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs">✓ Read</button>
+                                <button onclick="shareArticle('${item.url.replace(/'/g, "\\'")}', \`${safeTitle.replace(/`/g, '\\`')}\`)" class="text-green-600 dark:text-green-400 hover:text-green-800 text-xs">🔗 Share</button>
+                                <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 text-xs ml-auto">Read more →</a>
+                            </div>
+                        </div>
+                    `;
+                    regionContent.appendChild(card);
+                });
+
+                regionSection.appendChild(regionContent);
+                container.appendChild(regionSection);
+            }
+        }
+
+        function getTimeframeLabel(hours) {
+            if (hours === 3) return '3 hours';
+            if (hours === 6) return '6 hours';
+            if (hours === 24) return '24 hours';
+            if (hours === 72) return '3 days';
+            if (hours === 168) return 'week';
+            if (hours === 720) return 'month';
+            return 'selected period';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function filterArticlesBySearch() {
+            const searchTerm = normalizeText(document.getElementById('searchInput').value);
+            if (!searchTerm) {
+                document.querySelectorAll('[data-article]').forEach(a => a.style.display = '');
+                return;
+            }
+            document.querySelectorAll('[data-article]').forEach(article => {
+                const title = normalizeText(article.querySelector('h4')?.textContent || '');
+                const desc = normalizeText(article.querySelector('p')?.textContent || '');
+                article.style.display = (title.includes(searchTerm) || desc.includes(searchTerm)) ? '' : 'none';
+            });
+        }
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
+        }
+
+        function markAsRead(url, btn) {
+            let readArticles = JSON.parse(localStorage.getItem('readArticles') || '[]');
+            const card = btn.closest('[data-article]');
+            const isRead = readArticles.includes(url);
+            if (isRead) {
+                readArticles = readArticles.filter(u => u !== url);
+                if (card) card.classList.remove('opacity-40');
+                btn.textContent = '✓ Read';
+            } else {
+                readArticles.push(url);
+                if (card) card.classList.add('opacity-40');
+                btn.textContent = '↩ Unread';
+            }
+            localStorage.setItem('readArticles', JSON.stringify(readArticles));
+        }
+
+        function shareArticle(url, title) {
+            if (navigator.share) {
+                navigator.share({ title, url }).catch(() => copyToClipboard(url));
+            } else {
+                copyToClipboard(url);
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showStatus('🔗 Link copied to clipboard!', 'success');
+            }).catch(() => {
+                showStatus('Could not copy link', 'error');
+            });
+        }
+
+        function saveArticle(url, title, description, source) {
+            const savedArticles = JSON.parse(localStorage.getItem('savedArticles') || '[]');
+            const exists = savedArticles.some(article => article.url === url);
+            if (!exists) {
+                savedArticles.push({ url, title, description, source, savedAt: new Date().toISOString() });
+                localStorage.setItem('savedArticles', JSON.stringify(savedArticles));
+                showStatus(`Saved: ${title}`, 'success');
+            } else {
+                showStatus('Already saved', 'warning');
+            }
+            renderSavedArticles();
+        }
+
+        function toggleSavedArticles() {
+            const panel = document.getElementById('savedArticlesPanel');
+            panel.classList.toggle('hidden');
+            renderSavedArticles();
+        }
+
+        function renderSavedArticles() {
+            const saved = JSON.parse(localStorage.getItem('savedArticles') || '[]');
+            const container = document.getElementById('savedArticlesPanel');
+            container.innerHTML = '';
+            if (saved.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 col-span-2 text-center py-4">No saved articles yet.</p>';
+            } else {
+                saved.forEach(article => {
+                    const div = document.createElement('div');
+                    div.className = 'bg-white dark:bg-gray-800 rounded-lg shadow-md p-4';
+                    div.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <a href="${article.url}" target="_blank" class="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600">${article.title}</a>
+                            <button onclick="removeSavedArticle('${article.url.replace(/'/g, "\\'")}')" class="text-red-600 hover:text-red-800 text-xs ml-2">✕</button>
+                        </div>
+                        ${article.description ? `<p class="text-sm text-gray-600 dark:text-gray-300 mb-2">${article.description}</p>` : ''}
+                        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span>${article.source}</span><span>•</span><span>${new Date(article.savedAt).toLocaleString()}</span>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+            document.querySelector('[onclick="toggleSavedArticles()"]').textContent = `📑 Saved Articles (${saved.length})`;
+        }
+
+        function removeSavedArticle(url) {
+            let saved = JSON.parse(localStorage.getItem('savedArticles') || '[]');
+            saved = saved.filter(article => article.url !== url);
+            localStorage.setItem('savedArticles', JSON.stringify(saved));
+            renderSavedArticles();
+        }
+    </script>
+</body>
+</html>
