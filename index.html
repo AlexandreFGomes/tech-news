@@ -589,17 +589,25 @@
     // ── RSS Fetching ───────────────────────────────────────────
     async function fetchRSSFeed(feedUrl, sourceName, region, timeframeHours){
         const cacheKey=`rss-cache-${sourceName}`,cached=localStorage.getItem(cacheKey),now=Date.now(),cacheExpiry=15*60*1000,cutoffTime=now-(timeframeHours*3600000);
-        if(cached){try{const{timestamp,articles}=JSON.parse(cached);if(now-timestamp<cacheExpiry){showStatus(`✓ ${sourceName}: from cache`,'info');return articles.filter(a=>!a.pubDate||a.pubDate>=cutoffTime);}}catch(e){}}
-        showStatus(`Fetching ${sourceName}...`,'info');
+        if(cached){try{const{timestamp,articles}=JSON.parse(cached);if(now-timestamp<cacheExpiry){return{articles:articles.filter(a=>!a.pubDate||a.pubDate>=cutoffTime),error:null};}}catch(e){}}
         try{
             const controller=new AbortController(),tid=setTimeout(()=>controller.abort(),20000);
             const response=await fetch(PROXY_URL+encodeURIComponent(feedUrl),{signal:controller.signal,method:'GET',mode:'cors',cache:'no-cache'});
             clearTimeout(tid);if(!response.ok)throw new Error(`HTTP ${response.status}`);
             const text=await response.text();if(!text?.trim())throw new Error('Empty response');
-            const xml=new DOMParser().parseFromString(text,'text/xml');
-            if(xml.querySelector('parsererror'))throw new Error('Invalid XML');
+
+            // Robust parsing: strip XML declaration, fix bare ampersands, fallback to HTML mode
+            const cleanText=text.replace(/<\?xml[^?]*\?>/i,'').replace(/&(?!amp;|lt;|gt;|quot;|apos;|#)/g,'&amp;').trim();
+            let xml=new DOMParser().parseFromString(cleanText,'text/xml');
+            let items=xml.querySelectorAll('item, entry');
+            if(xml.querySelector('parsererror')||items.length===0){
+                xml=new DOMParser().parseFromString(text,'text/html');
+                items=xml.querySelectorAll('item, entry');
+                if(items.length===0)throw new Error('Not a valid RSS/Atom feed');
+            }
+
             const articles=[];
-            xml.querySelectorAll('item, entry').forEach(item=>{
+            items.forEach(item=>{
                 try{
                     const title=item.querySelector('title')?.textContent?.trim()||'';
                     const linkEl=item.querySelector('link');const link=linkEl?.textContent?.trim()||linkEl?.getAttribute('href')||'';
@@ -612,9 +620,11 @@
                 }catch(e){}
             });
             localStorage.setItem(cacheKey,JSON.stringify({timestamp:now,articles}));
-            showStatus(`✓ ${sourceName}: ${articles.length} articles`,'success');
-            return articles;
-        }catch(error){showStatus(`✗ ${sourceName} failed: ${error.message}`,'error');return[];}
+            return{articles,error:null};
+        }catch(error){
+            const label=error.name==='AbortError'?'Timeout':error.message;
+            return{articles:[],error:`${sourceName}: ${label}`};
+        }
     }
 
     // ── Main fetch ─────────────────────────────────────────────
@@ -631,9 +641,18 @@
         document.getElementById('loadingSkeleton').classList.remove('hidden');
         try{
             const results=await Promise.all(allSources.map(s=>fetchRSSFeed(s.url,s.name,s.region,parseInt(document.getElementById('timeframeSelect').value))));
-            const allArticles=results.flat();
+            const errors=results.map(r=>r.error).filter(Boolean);
+            const allArticles=results.flatMap(r=>r.articles);
             const seen=new Set();
             const unique=allArticles.filter(a=>{if(seen.has(a.url))return false;seen.add(a.url);return true;});
+
+            if(errors.length>0){
+                const summary=errors.length<=3
+                    ?`⚠ ${errors.length} source(s) failed: ${errors.join(', ')}`
+                    :`⚠ ${errors.length} sources failed (${errors.slice(0,2).join(', ')}…) — paywalls or broken feeds`;
+                showStatus(summary,'warning');
+            }
+
             if(!unique.length){showStatus('No articles found.','error');document.getElementById('newsContainer').innerHTML='';}
             else{
                 const filtered=filterByMutedKeywords(filterByTopics(unique));
@@ -644,6 +663,7 @@
         }catch(e){showStatus(`Error: ${e.message}`,'error');}
         finally{btn.disabled=false;btn.innerHTML='<span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Fetch</span>';document.getElementById('loadingSkeleton').classList.add('hidden');}
     }
+
 
     function filterByTopics(articles){
         if(!selectedTopics.size)return articles;
