@@ -106,11 +106,12 @@
                     <div class="flex items-center gap-2">
                         <label class="text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Region</label>
                         <select id="regionSelect" onchange="updateSourcesList()" class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                            <option value="netherlands">Netherlands</option>
-                            <option value="portugal">Portugal</option>
-                            <option value="europe">Europe</option>
-                            <option value="us">United States</option>
-                            <option value="global">Global</option>
+                        <option value="netherlands">Netherlands</option>
+                        <option value="portugal">Portugal</option>
+                        <option value="europe">Europe</option>
+                        <option value="uk">United Kingdom</option>
+                        <option value="us">United States</option>
+                        <option value="asia">Asia</option>
                         </select>
                     </div>
                     <div class="flex items-center gap-2">
@@ -339,10 +340,27 @@
                 { name: 'VentureBeat', url: 'https://venturebeat.com/feed/', enabled: true },
                 { name: 'ZDNet', url: 'https://www.zdnet.com/news/rss/', enabled: true }
             ],
-            global: [
-                { name: 'BBC Technology', url: 'http://feeds.bbci.co.uk/news/technology/rss.xml', enabled: true },
-                { name: 'The Guardian Tech', url: 'https://www.theguardian.com/technology/rss', enabled: true }
-            ]
+            uk: [
+            { name: 'BBC Technology', url: 'http://feeds.bbci.co.uk/news/technology/rss.xml', enabled: true },
+            { name: 'The Guardian Tech', url: 'https://www.theguardian.com/technology/rss', enabled: true },
+            { name: 'Financial Times (UK)', url: 'https://www.ft.com/rss/home/uk', enabled: true },
+            { name: 'Sky News', url: 'https://feeds.skynews.com/feeds/rss/uk.xml', enabled: true },
+            { name: 'The Independent', url: 'https://www.independent.co.uk/news/rss', enabled: true },
+            { name: 'Reuters UK', url: 'https://feeds.reuters.com/reuters/UKdomesticNews', enabled: true },
+            { name: 'TechCrunch UK', url: 'https://techcrunch.com/category/europe/uk/feed/', enabled: true },
+            { name: 'The Telegraph', url: 'https://www.telegraph.co.uk/rss', enabled: true }
+        ],
+        asia: [
+            { name: 'Nikkei Asia', url: 'https://asia.nikkei.com/rss', enabled: true },
+            { name: 'South China Morning Post', url: 'https://www.scmp.com/rss/feed', enabled: true },
+            { name: 'The Straits Times', url: 'https://www.straitstimes.com/news/rss.xml', enabled: true },
+            { name: 'The Diplomat', url: 'https://thediplomat.com/feed/', enabled: true },
+            { name: 'Tech in Asia', url: 'https://www.techinasia.com/feed', enabled: true },
+            { name: 'Reuters Asia', url: 'https://feeds.reuters.com/reuters/asia', enabled: true },
+            { name: 'The Hindu', url: 'https://www.thehindu.com/news/national/feeder/default.rss', enabled: true },
+            { name: 'Japan Times', url: 'https://www.japantimes.co.jp/feed/news/', enabled: true }
+        ],
+    };
         };
 
         let TOPICS = [
